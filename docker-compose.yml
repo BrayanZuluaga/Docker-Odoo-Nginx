@@ -1,0 +1,58 @@
+version: '3.7'
+
+# Contenedores que se desean lanzar.
+services:
+    # Contendor con solo el servicio de Postgresql.
+    postgresql:
+        build: ./postgresql
+        container_name: postgresql-container
+        #restart: always
+        env_file:
+            - ./postgresql/.env.dev
+        volumes_from:
+            - postgresql-data
+
+    # Contenedor con el servicio que aloja la base de datos generada por Odoo.
+    postgresql-data: 
+        build: ./postgresql  
+        container_name: postgres-db-container 
+        volumes:
+            - ./postgresql/postgresql-data:/var/lib/postgresql/data
+        command: "true"
+
+    # Contenedor con solo el serviocio de Odoo.
+    odoo:
+        build: ./odoo
+        container_name: odoo-container
+        #restart: always
+        depends_on:
+            - postgresql
+        volumes: 
+            - odoo-data:/var/lib/odoo/
+            - ./odoo/extra-addons/:/mnt/extra-addons/
+            #- ./odoo/odoo.conf:/etc/odoo/odoo.conf 
+        #ports:
+        #    - 8069:8069
+        env_file:
+            - ./odoo/.env.dev
+    
+    # Contenedor con el servicio de Nginx.
+    nginx:
+        build: ./nginx
+        container_name: nginx-container
+        #restart: always
+        ports:
+            - 80:80
+            - 443:443
+        volumes:
+            - ./nginx/ssl/:/etc/ssl/nginx/
+            - ./nginx/sites-enabled/:/etc/nginx/conf.d/
+        links:
+            - odoo
+        #depends_on:
+        #    - odoo
+
+# Creacion de las carpetas locales para enlazar los datos entre contenedores y local.
+volumes: 
+#    postgresql-data:
+    odoo-data:
